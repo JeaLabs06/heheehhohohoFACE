@@ -13,10 +13,10 @@ import NotFound from './pages/components/NotFount';
 import Layout from './pages/components/Layout';
 import AdminLayout from './pages/components/LayoutAdmin';
 
-
 // Super Admin, Admin, Moderator Pages
 import AdminDashboard from './pages/admin_main/AdminDashboard';
-import EventManagement from './pages/admin_main/EventManagement';
+import EventManagement from './pages/admin_main/EventManagement'; // Keep this for registration
+import EventsManage from './pages/admin_main/EventsManage'; // Import EventsManage component
 import AdminManagement from './pages/admin_main/AdminManagement';
 import AddOrganization from './pages/admin_main/AddOrganization';
 import StudentManage from './pages/admin_main/StudentManage';
@@ -41,7 +41,6 @@ function App() {
     <LoadingProvider>
       <MainApp />
     </LoadingProvider>
-
   );
 }
 
@@ -65,7 +64,8 @@ function MainApp() {
           {/* Super Admin Layout */}
           <Route element={<Layout />}>
             <Route path="/superadmin" element={<AdminDashboard />} />
-            <Route path="/admin/events" element={<EventManagement />} />
+            <Route path="/admin/events" element={<EventsManage />} /> {/* Updated Route for Event Management */}
+            <Route path="/admin/events-registration" element={<EventManagement />} /> {/* New Route for Event Registration */}
             <Route path="/admin/admins" element={<AdminManagement />} />
             <Route path="/admin/addOrg" element={<AddOrganization />} />
             <Route path="/admin/StudentManage" element={<StudentManage />} />

@@ -686,5 +686,21 @@ input[type="file"] {
 .file-input-container input {
     margin-right: 10px; /* Space between input and file name */
 }
+/* generalstyles.css */
+.create-event-button {
+    background-color: #4CAF50; /* Green */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 20px; /* Space between button and table */
+    font-size: 16px; /* Font size */
+  }
+  
+  .create-event-button:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+  
 
 

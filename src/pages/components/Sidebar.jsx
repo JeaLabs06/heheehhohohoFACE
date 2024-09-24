@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTachometerAlt, faClipboardList, faUsers, faBuilding, faClipboard, faUserPlus, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faTachometerAlt, faUsers, faBuilding, faClipboard, faUserPlus, faUser, faTasks } from '@fortawesome/free-solid-svg-icons';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
-    // Toggle a class for the main content area
     document.querySelector('.main-content').classList.toggle('shifted');
   };
 
@@ -26,8 +25,8 @@ const Sidebar = () => {
         </li>
         <li>
           <Link to="/admin/events">
-            <FontAwesomeIcon icon={faClipboardList} className="sidebar-icon" />
-            {isOpen && ' Event Registration'}
+            <FontAwesomeIcon icon={faTasks} className="sidebar-icon" />
+            {isOpen && ' Event Management'}
           </Link>
         </li>
         <li>

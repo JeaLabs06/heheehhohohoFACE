@@ -53,7 +53,7 @@ function Home_main() {
       const labeledFaceDescriptors = await loadLabeledImages();
       const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.5);
 
-      alert('Models Loaded!');
+      alert('Loaded!');
 
       const canvas = faceapi.createCanvasFromMedia(videoRef.current);
       document.body.append(canvas);
@@ -146,7 +146,7 @@ function Home_main() {
           }
         }
         if (descriptors.length > 0) {
-          const faceDescriptor = new faceapi.LabeledFaceDescriptors(user.lname, descriptors);
+          const faceDescriptor = new faceapi.LabeledFaceDescriptors(user.schoolID, descriptors);
           labeledFaceDescriptors.push(faceDescriptor);
         }
       }
@@ -190,28 +190,86 @@ function Home_main() {
     return null;
   };
 
-  // Mark attendance and update Firestore
-  const attendance = async (label) => {
-    if (!tempAttendance.current.has(label) && label !== 'unknown') {
-      tempAttendance.current.add(label);
+ // Mark attendance and update Firestore
+const attendance = async (label) => {
+  if (!tempAttendance.current.has(label) && label !== 'unknown') {
+    tempAttendance.current.add(label);
 
-      try {
+    try {
+      // Fetch user data based on label (school ID)
+      const user = await fetchUserBySchoolID(label);
+      if (!user) {
+        throw new Error(`No user found with school ID: ${label}`);
+      }
+
+      // Fetch event data to check for department restrictions
+      const eventDoc = await getDoc(doc(FIRESTORE_DB, 'events', selectedEvent));
+      if (!eventDoc.exists()) {
+        throw new Error('Event not found.');
+      }
+
+      const eventData = eventDoc.data();
+
+      // Check if the student's department, course, and year level match the event
+      if (
+        user.course === eventData.course &&
+        user.department === eventData.department &&
+        user.yearLevel === eventData.yearLevel
+      ) {
+        // Student is eligible, proceed to mark attendance
         const attendanceRef = collection(FIRESTORE_DB, 'events', selectedEvent, 'attendance');
+        const now = new Date(); // Get the current date and time
 
         await addDoc(attendanceRef, {
-          attendee: label,
-          timestamp: new Date().toISOString(),
+          schoolID: label,
+          timestamp: now.toLocaleString(), // Store full local date and time
+          studentInfo: {
+            fname: user.fname,
+            lname: user.lname,
+            mname: user.mname,
+            age: user.age,
+            email: user.email,
+            course: user.course,
+            major: user.major,
+            yearLevel: user.yearLevel,
+          },
         });
 
         setAttendanceMessages(prevMessages => [
           ...prevMessages,
-          `${label} recognized and attendance recorded at ${new Date().toLocaleTimeString()}`
+          `${user.fname} ${user.lname} attendance recorded at ${now.toLocaleString()}` // Display full local date and time
         ]);
-      } catch (error) {
-        console.error('Error adding attendance record:', error);
+      } else {
+        // Student is not eligible to attend this event
+        setAttendanceMessages(prevMessages => [
+          ...prevMessages,
+          `${user.fname} ${user.lname} is not eligible to attend this event.`
+        ]);
       }
+    } catch (error) {
+      console.error('Error adding attendance record:', error.message);
     }
-  };
+  }
+};
+
+// Fetch user by school ID
+const fetchUserBySchoolID = async (schoolID) => {
+  try {
+    const usersCollection = collection(FIRESTORE_DB, 'users');
+    const q = query(usersCollection, where('schoolID', '==', schoolID));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    } else {
+      throw new Error(`User with schoolID ${schoolID} not found.`);
+    }
+  } catch (error) {
+    console.error(`Error fetching user by schoolID ${schoolID}:`, error.message);
+    return null;
+  }
+};
+
 
   // Confirm event selection
   const handleConfirmEvent = () => {

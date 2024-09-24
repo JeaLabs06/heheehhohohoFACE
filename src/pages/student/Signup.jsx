@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Form, Alert } from 'react-bootstrap';
 import { FIREBASE_AUTH, FIRESTORE_DB, STORAGE } from '../../firebaseutil/firebase_main';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, collection, getDocs, query } from 'firebase/firestore';
+import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useNavigate } from 'react-router-dom';
 import LoadingScreen from '../components/LoadingScreen'; 
@@ -37,32 +37,45 @@ const SignUp = () => {
   const [departments, setDepartments] = useState([]);
   const [courses, setCourses] = useState([]);
   const [majors, setMajors] = useState([]);
+  const [yearLevels, setYearLevels] = useState([]); // Added yearLevels state
 
   const navigate = useNavigate();
 
   // Fetch organizations from Firestore
-  const fetchOrganizations = async () => {
-    const orgSnapshot = await getDocs(collection(FIRESTORE_DB, 'organizations'));
-    setOrganizations(orgSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  };
+const fetchOrganizations = async () => {
+  const orgSnapshot = await getDocs(collection(FIRESTORE_DB, 'organizations'));
+  const orgs = orgSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  setOrganizations(orgs.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
+};
 
-  // Fetch departments from Firestore
-  const fetchDepartments = async () => {
-    const deptSnapshot = await getDocs(collection(FIRESTORE_DB, 'departments'));
-    setDepartments(deptSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  };
+// Fetch departments from Firestore
+const fetchDepartments = async () => {
+  const deptSnapshot = await getDocs(collection(FIRESTORE_DB, 'departments'));
+  const deps = deptSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  setDepartments(deps.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
+};
 
-  // Fetch courses based on selected department
-  const fetchCourses = async (departmentId) => {
-    const courseSnapshot = await getDocs(collection(FIRESTORE_DB, `departments/${departmentId}/courses`));
-    setCourses(courseSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  };
+// Fetch courses based on selected department
+const fetchCourses = async (departmentId) => {
+  const courseSnapshot = await getDocs(collection(FIRESTORE_DB, `departments/${departmentId}/courses`));
+  const coursesData = courseSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  setCourses(coursesData.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
+};
 
-  // Fetch majors based on selected course
-  const fetchMajors = async (departmentId, courseId) => {
-    const majorSnapshot = await getDocs(collection(FIRESTORE_DB, `departments/${departmentId}/courses/${courseId}/majors`));
-    setMajors(majorSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  };
+// Fetch majors based on selected course
+const fetchMajors = async (departmentId, courseId) => {
+  const majorSnapshot = await getDocs(collection(FIRESTORE_DB, `departments/${departmentId}/courses/${courseId}/majors`));
+  const majorsData = majorSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  setMajors(majorsData.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
+};
+
+// Fetch year levels based on selected department
+const fetchYearLevels = async (departmentId) => {
+  const yearLevelSnapshot = await getDocs(collection(FIRESTORE_DB, `departments/${departmentId}/yearLevels`));
+  const yearLevelsData = yearLevelSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  setYearLevels(yearLevelsData.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
+};
+
 
   useEffect(() => {
     fetchOrganizations();
@@ -70,19 +83,21 @@ const SignUp = () => {
   }, []);
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
 
-    // If department is changed, fetch corresponding courses
-    if (e.target.name === 'department') {
-      fetchCourses(e.target.value); // Fetch courses for the selected department
+    // If department is changed, fetch corresponding courses and year levels
+    if (name === 'department') {
+      fetchCourses(value); // Fetch courses for the selected department
+      fetchYearLevels(value); // Fetch year levels for the selected department
     }
 
     // If course is changed, fetch corresponding majors
-    if (e.target.name === 'course') {
-      fetchMajors(formData.department, e.target.value); // Fetch majors for the selected course and department
+    if (name === 'course') {
+      fetchMajors(formData.department, value); // Fetch majors for the selected course and department
     }
   };
 
@@ -187,22 +202,18 @@ const SignUp = () => {
             <Form.Label>Middle Name</Form.Label>
             <Form.Control type="text" name="mname" value={formData.mname} onChange={handleChange} />
           </Form.Group>
+
+          {/* Year Level Dropdown */}
           <Form.Group controlId="formYearLevel">
             <Form.Label>Year Level</Form.Label>
-            <Form.Control
-              as="select"
-              name="yearLevel"
-              value={formData.yearLevel}
-              onChange={handleChange}
-              required
-            >
+            <Form.Control as="select" name="yearLevel" value={formData.yearLevel} onChange={handleChange} required>
               <option value="">Select Year Level</option>
-              <option value="1st Year">1st Year</option>
-              <option value="2nd Year">2nd Year</option>
-              <option value="3rd Year">3rd Year</option>
-              <option value="4th Year">4th Year</option>
+              {yearLevels.map(yearLevel => (
+                <option key={yearLevel.id} value={yearLevel.id}>{yearLevel.name}</option>
+              ))}
             </Form.Control>
           </Form.Group>
+
           <Form.Group controlId="formEmail">
             <Form.Label>Email</Form.Label>
             <Form.Control type="email" name="email" value={formData.email} onChange={handleChange} required />
@@ -248,7 +259,7 @@ const SignUp = () => {
           {/* Major Dropdown */}
           <Form.Group controlId="formMajor">
             <Form.Label>Major</Form.Label>
-            <Form.Control as="select" name="major" value={formData.major} onChange={handleChange}>
+            <Form.Control as="select" name="major" value={formData.major} onChange={handleChange} required>
               <option value="">Select Major</option>
               {majors.map(major => (
                 <option key={major.id} value={major.id}>{major.name}</option>
@@ -264,21 +275,24 @@ const SignUp = () => {
             <Form.Label>Password</Form.Label>
             <Form.Control type="password" name="password" value={formData.password} onChange={handleChange} required />
           </Form.Group>
-
+          
+          {/* Photo Uploads */}
           <Form.Group controlId="formFrontPhoto">
-            <Form.Label>Front Photo</Form.Label>
-            <Form.Control type="file" name="front" onChange={handlePhotoChange} />
+            <Form.Label>Upload Front Photo</Form.Label>
+            <Form.Control type="file" name="front" onChange={handlePhotoChange} required />
           </Form.Group>
           <Form.Group controlId="formLeftPhoto">
-            <Form.Label>Left Photo</Form.Label>
-            <Form.Control type="file" name="left" onChange={handlePhotoChange} />
+            <Form.Label>Upload Left Photo</Form.Label>
+            <Form.Control type="file" name="left" onChange={handlePhotoChange} required />
           </Form.Group>
           <Form.Group controlId="formRightPhoto">
-            <Form.Label>Right Photo</Form.Label>
-            <Form.Control type="file" name="right" onChange={handlePhotoChange} />
+            <Form.Label>Upload Right Photo</Form.Label>
+            <Form.Control type="file" name="right" onChange={handlePhotoChange} required />
           </Form.Group>
 
-          <Button variant="primary" type="submit">Sign Up</Button>
+          <Button variant="primary" type="submit">
+            Sign Up
+          </Button>
         </Form>
       )}
     </div>

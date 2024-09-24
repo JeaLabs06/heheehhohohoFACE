@@ -13,25 +13,22 @@ const EventManagement = () => {
     venue: "",
     organizations: [],
     year: [],
-    selectedDepartments: {}, // Correctly initialized
+    selectedDepartments: {},
   });
 
   const [organizationsList, setOrganizationsList] = useState([]);
-  const [yearLevels, setYearLevels] = useState(["Year 1", "Year 2", "Year 3", "Year 4"]);
-  const [departments, setDepartments] = useState({}); // Stores department, course, and major names
+  const [yearLevels, setYearLevels] = useState(["1st Year", "2nd Year", "3rd Year", "4th Year"]);
+  const [departments, setDepartments] = useState({});
 
   const navigate = useNavigate(); 
 
-  // Fetch organizations and departments from Firestore on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch organizations
         const orgQuerySnapshot = await getDocs(collection(FIRESTORE_DB, "organizations"));
         const orgs = orgQuerySnapshot.docs.map(doc => doc.data().name);
         setOrganizationsList(orgs);
 
-        // Fetch departments, courses, and majors
         const deptQuerySnapshot = await getDocs(collection(FIRESTORE_DB, "departments"));
         const departmentsData = {};
 
@@ -204,10 +201,9 @@ const EventManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Use addDoc to automatically generate a document ID
       await addDoc(collection(FIRESTORE_DB, "events"), eventData);
       alert('Event added successfully!');
-      navigate('/superadmin'); // Redirect to superadmin page after successful submission
+      navigate('/superadmin');
     } catch (error) {
       console.error('Error adding event:', error);
       alert('Failed to add event. Please try again.');
@@ -216,7 +212,6 @@ const EventManagement = () => {
 
   return (
     <div className="event-management">
-      {/* Back Button */}
       <button className="back-button" onClick={() => navigate('/superadmin')}>
         &lt; Back
       </button>
@@ -256,7 +251,6 @@ const EventManagement = () => {
           required
         />
 
-        {/* Year Level Selection as Checkboxes */}
         <div className="checkbox-group">
           <label>Select Year Levels:</label>
           <div className="checkbox-item">
@@ -283,7 +277,6 @@ const EventManagement = () => {
           ))}
         </div>
 
-        {/* Organization Selection as Checkboxes */}
         <div className="checkbox-group">
           <label>Select Organizations:</label>
           <div className="checkbox-item">
@@ -310,7 +303,6 @@ const EventManagement = () => {
           ))}
         </div>
 
-        {/* Department, Course, and Major Selection as Checkboxes */}
         <div className="checkbox-group">
           <label>Select Departments:</label>
           {Object.keys(departments).map((department, deptIndex) => (
@@ -325,39 +317,47 @@ const EventManagement = () => {
                 />
                 <label htmlFor={`department-${deptIndex}`}>{department}</label>
               </div>
-              {eventData.selectedDepartments[department] && Object.keys(departments[department]).map((course, courseIndex) => (
-                <div key={courseIndex} style={{ marginLeft: '20px' }}>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id={`course-${deptIndex}-${courseIndex}`}
-                      value={`${department}|${course}`}
-                      onChange={handleCourseChange}
-                      checked={eventData.selectedDepartments[department][course] !== undefined}
-                    />
-                    <label htmlFor={`course-${deptIndex}-${courseIndex}`}>{course}</label>
-                  </div>
-                  {eventData.selectedDepartments[department][course] && departments[department][course].map((major, majorIndex) => (
-                    <div key={majorIndex} style={{ marginLeft: '40px' }}>
+
+              {/* Show courses dropdown if department is selected */}
+              {eventData.selectedDepartments[department] && (
+                <div className="courses-dropdown">
+                  {Object.keys(departments[department]).map((course, courseIndex) => (
+                    <div key={courseIndex}>
                       <div className="checkbox-item">
                         <input
                           type="checkbox"
-                          id={`major-${deptIndex}-${courseIndex}-${majorIndex}`}
-                          value={`${department}|${course}|${major}`}
-                          onChange={handleMajorChange}
-                          checked={eventData.selectedDepartments[department][course].includes(major)}
+                          id={`course-${deptIndex}-${courseIndex}`}
+                          value={`${department}|${course}`}
+                          onChange={handleCourseChange}
                         />
-                        <label htmlFor={`major-${deptIndex}-${courseIndex}-${majorIndex}`}>{major}</label>
+                        <label htmlFor={`course-${deptIndex}-${courseIndex}`}>{course}</label>
                       </div>
+
+                      {/* Show majors checkboxes if course is selected */}
+                      {eventData.selectedDepartments[department][course] && (
+                        <div className="majors-checkbox-group">
+                          {departments[department][course].map((major, majorIndex) => (
+                            <div className="checkbox-item" key={majorIndex}>
+                              <input
+                                type="checkbox"
+                                id={`major-${deptIndex}-${courseIndex}-${majorIndex}`}
+                                value={`${department}|${course}|${major}`}
+                                onChange={handleMajorChange}
+                              />
+                              <label htmlFor={`major-${deptIndex}-${courseIndex}-${majorIndex}`}>{major}</label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
-              ))}
+              )}
             </div>
           ))}
         </div>
 
-        <button type="submit">Add Event</button>
+        <button type="submit">Create Event</button>
       </form>
     </div>
   );
