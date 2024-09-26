@@ -190,86 +190,68 @@ function Home_main() {
     return null;
   };
 
- // Mark attendance and update Firestore
-const attendance = async (label) => {
-  if (!tempAttendance.current.has(label) && label !== 'unknown') {
-    tempAttendance.current.add(label);
-
-    try {
-      // Fetch user data based on label (school ID)
-      const user = await fetchUserBySchoolID(label);
-      if (!user) {
-        throw new Error(`No user found with school ID: ${label}`);
+  // Mark attendance and update Firestore
+  const attendance = async (label) => {
+    if (!tempAttendance.current.has(label) && label !== 'unknown') {
+      tempAttendance.current.add(label);
+    
+      try {
+        const user = await fetchUserBySchoolID(label);
+        const event = events.find(e => e.id === selectedEvent);
+  
+        // Check if user matches the event requirements
+        if (
+          user.course === event.course &&
+          user.major === event.major &&
+          user.yearLevel === event.yearLevel
+        ) {
+          const attendanceRef = collection(FIRESTORE_DB, 'events', selectedEvent, 'attendance');
+          const now = new Date();
+  
+          await addDoc(attendanceRef, {
+            schoolID: label,
+            timestamp: now.toLocaleString(),
+            studentInfo: {
+              fname: user.fname,
+              lname: user.lname,
+              mname: user.mname,
+              age: user.age,
+              email: user.email,
+              course: user.course,
+              major: user.major,
+              yearLevel: user.yearLevel,
+            },
+          });
+  
+          setAttendanceMessages(prevMessages => [
+            ...prevMessages,
+            `${user.fname} ${user.lname} attended ${event?.name} at ${now.toLocaleString()}`
+          ]);
+        } else {
+          alert(`${user.fname} ${user.lname} is not eligible to attend this event.`);
+        }
+      } catch (error) {
+        console.error('Error adding attendance record:', error);
       }
-
-      // Fetch event data to check for department restrictions
-      const eventDoc = await getDoc(doc(FIRESTORE_DB, 'events', selectedEvent));
-      if (!eventDoc.exists()) {
-        throw new Error('Event not found.');
-      }
-
-      const eventData = eventDoc.data();
-
-      // Check if the student's department, course, and year level match the event
-      if (
-        user.course === eventData.course &&
-        user.department === eventData.department &&
-        user.yearLevel === eventData.yearLevel
-      ) {
-        // Student is eligible, proceed to mark attendance
-        const attendanceRef = collection(FIRESTORE_DB, 'events', selectedEvent, 'attendance');
-        const now = new Date(); // Get the current date and time
-
-        await addDoc(attendanceRef, {
-          schoolID: label,
-          timestamp: now.toLocaleString(), // Store full local date and time
-          studentInfo: {
-            fname: user.fname,
-            lname: user.lname,
-            mname: user.mname,
-            age: user.age,
-            email: user.email,
-            course: user.course,
-            major: user.major,
-            yearLevel: user.yearLevel,
-          },
-        });
-
-        setAttendanceMessages(prevMessages => [
-          ...prevMessages,
-          `${user.fname} ${user.lname} attendance recorded at ${now.toLocaleString()}` // Display full local date and time
-        ]);
-      } else {
-        // Student is not eligible to attend this event
-        setAttendanceMessages(prevMessages => [
-          ...prevMessages,
-          `${user.fname} ${user.lname} is not eligible to attend this event.`
-        ]);
-      }
-    } catch (error) {
-      console.error('Error adding attendance record:', error.message);
     }
-  }
-};
+  };
+  
+  
 
 // Fetch user by school ID
 const fetchUserBySchoolID = async (schoolID) => {
   try {
-    const usersCollection = collection(FIRESTORE_DB, 'users');
-    const q = query(usersCollection, where('schoolID', '==', schoolID));
-    const querySnapshot = await getDocs(q);
-    
-    if (!querySnapshot.empty) {
-      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
-    } else {
-      throw new Error(`User with schoolID ${schoolID} not found.`);
-    }
+      const usersCollection = collection(FIRESTORE_DB, 'users');
+      const q = query(usersCollection, where('schoolID', '==', schoolID));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+          return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+      }
   } catch (error) {
-    console.error(`Error fetching user by schoolID ${schoolID}:`, error.message);
-    return null;
+      console.error(`Error fetching user by schoolID ${schoolID}:`, error);
   }
+  return null;
 };
-
 
   // Confirm event selection
   const handleConfirmEvent = () => {

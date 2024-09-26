@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Form, Alert } from 'react-bootstrap';
-import { FIREBASE_AUTH, FIRESTORE_DB, STORAGE } from '../../firebaseutil/firebase_main';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useNavigate } from 'react-router-dom';
-import LoadingScreen from '../components/LoadingScreen'; 
+import LoadingScreen from '../components/LoadingScreen';
+import { FIREBASE_AUTH, FIRESTORE_DB, STORAGE } from '../../firebaseutil/firebase_main';
 import './generalstyles.css';
 
 const SignUp = () => {
@@ -13,6 +13,7 @@ const SignUp = () => {
     fname: "",
     lname: "",
     mname: "",
+    nameExtension: "", // Added name extension
     yearLevel: "",
     email: "",
     age: "",
@@ -21,7 +22,7 @@ const SignUp = () => {
     schoolID: "",
     password: "",
     organization: "",
-    department: "", // Added department
+    department: "", // Removed department from formData
   });
 
   const [photos, setPhotos] = useState({
@@ -37,45 +38,44 @@ const SignUp = () => {
   const [departments, setDepartments] = useState([]);
   const [courses, setCourses] = useState([]);
   const [majors, setMajors] = useState([]);
-  const [yearLevels, setYearLevels] = useState([]); // Added yearLevels state
+  const [yearLevels, setYearLevels] = useState([]);
 
   const navigate = useNavigate();
 
   // Fetch organizations from Firestore
-const fetchOrganizations = async () => {
-  const orgSnapshot = await getDocs(collection(FIRESTORE_DB, 'organizations'));
-  const orgs = orgSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  setOrganizations(orgs.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
-};
+  const fetchOrganizations = async () => {
+    const orgSnapshot = await getDocs(collection(FIRESTORE_DB, 'organizations'));
+    const orgs = orgSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setOrganizations(orgs.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
+  };
 
-// Fetch departments from Firestore
-const fetchDepartments = async () => {
-  const deptSnapshot = await getDocs(collection(FIRESTORE_DB, 'departments'));
-  const deps = deptSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  setDepartments(deps.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
-};
+  // Fetch departments from Firestore
+  const fetchDepartments = async () => {
+    const deptSnapshot = await getDocs(collection(FIRESTORE_DB, 'departments'));
+    const deps = deptSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setDepartments(deps.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
+  };
 
-// Fetch courses based on selected department
-const fetchCourses = async (departmentId) => {
-  const courseSnapshot = await getDocs(collection(FIRESTORE_DB, `departments/${departmentId}/courses`));
-  const coursesData = courseSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  setCourses(coursesData.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
-};
+  // Fetch courses based on selected department
+  const fetchCourses = async (departmentId) => {
+    const courseSnapshot = await getDocs(collection(FIRESTORE_DB, `departments/${departmentId}/courses`));
+    const coursesData = courseSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setCourses(coursesData.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
+  };
 
-// Fetch majors based on selected course
-const fetchMajors = async (departmentId, courseId) => {
-  const majorSnapshot = await getDocs(collection(FIRESTORE_DB, `departments/${departmentId}/courses/${courseId}/majors`));
-  const majorsData = majorSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  setMajors(majorsData.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
-};
+  // Fetch majors based on selected course
+  const fetchMajors = async (departmentId, courseId) => {
+    const majorSnapshot = await getDocs(collection(FIRESTORE_DB, `departments/${departmentId}/courses/${courseId}/majors`));
+    const majorsData = majorSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setMajors(majorsData.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
+  };
 
-// Fetch year levels based on selected department
-const fetchYearLevels = async (departmentId) => {
-  const yearLevelSnapshot = await getDocs(collection(FIRESTORE_DB, `departments/${departmentId}/yearLevels`));
-  const yearLevelsData = yearLevelSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  setYearLevels(yearLevelsData.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
-};
-
+  // Fetch year levels based on selected department
+  const fetchYearLevels = async (departmentId) => {
+    const yearLevelSnapshot = await getDocs(collection(FIRESTORE_DB, `departments/${departmentId}/yearLevels`));
+    const yearLevelsData = yearLevelSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setYearLevels(yearLevelsData.sort((a, b) => a.name.localeCompare(b.name))); // Sort by name
+  };
 
   useEffect(() => {
     fetchOrganizations();
@@ -127,7 +127,7 @@ const fetchYearLevels = async (departmentId) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    setLoading(true); 
+    setLoading(true);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(
@@ -138,23 +138,23 @@ const fetchYearLevels = async (departmentId) => {
 
       const userId = userCredential.user.uid;
       const photoURLs = await uploadPhotos(userId);
-  
+
       await setDoc(doc(FIRESTORE_DB, "users", userId), {
         fname: formData.fname,
         lname: formData.lname,
         mname: formData.mname,
+        nameExtension: formData.nameExtension, // Added name extension
         yearLevel: formData.yearLevel,
         email: formData.email,
         age: formData.age,
         course: formData.course,
         major: formData.major,
         organization: formData.organization,
-        department: formData.department, // Save selected department
         schoolID: formData.schoolID,
         role: "user",
         photos: photoURLs,
       });
-  
+
       setSuccess("User registered successfully!");
       navigate("/");
 
@@ -194,44 +194,36 @@ const fetchYearLevels = async (departmentId) => {
             <Form.Label>First Name</Form.Label>
             <Form.Control type="text" name="fname" value={formData.fname} onChange={handleChange} required />
           </Form.Group>
-          <Form.Group controlId="formLname">
-            <Form.Label>Last Name</Form.Label>
-            <Form.Control type="text" name="lname" value={formData.lname} onChange={handleChange} required />
-          </Form.Group>
+
           <Form.Group controlId="formMname">
             <Form.Label>Middle Name</Form.Label>
             <Form.Control type="text" name="mname" value={formData.mname} onChange={handleChange} />
           </Form.Group>
 
-          {/* Year Level Dropdown */}
-          <Form.Group controlId="formYearLevel">
-            <Form.Label>Year Level</Form.Label>
-            <Form.Control as="select" name="yearLevel" value={formData.yearLevel} onChange={handleChange} required>
-              <option value="">Select Year Level</option>
-              {yearLevels.map(yearLevel => (
-                <option key={yearLevel.id} value={yearLevel.id}>{yearLevel.name}</option>
-              ))}
-            </Form.Control>
+          <Form.Group controlId="formLname">
+            <Form.Label>Last Name</Form.Label>
+            <Form.Control type="text" name="lname" value={formData.lname} onChange={handleChange} required />
+          </Form.Group>
+
+          {/* Name Extension Field */}
+          <Form.Group controlId="formNameExtension">
+            <Form.Label>Name Extension (e.g., Jr., Sr.)</Form.Label>
+            <Form.Control type="text" name="nameExtension" value={formData.nameExtension} onChange={handleChange} />
+          </Form.Group>
+
+          <Form.Group controlId="formAge">
+            <Form.Label>Age</Form.Label>
+            <Form.Control type="number" name="age" value={formData.age} onChange={handleChange} required />
+          </Form.Group>
+
+          <Form.Group controlId="formSchoolID">
+            <Form.Label>School ID</Form.Label>
+            <Form.Control type="text" name="schoolID" value={formData.schoolID} onChange={handleChange} required />
           </Form.Group>
 
           <Form.Group controlId="formEmail">
             <Form.Label>Email</Form.Label>
             <Form.Control type="email" name="email" value={formData.email} onChange={handleChange} required />
-          </Form.Group>
-          <Form.Group controlId="formAge">
-            <Form.Label>Age</Form.Label>
-            <Form.Control type="number" name="age" value={formData.age} onChange={handleChange} required />
-          </Form.Group>
-          
-          {/* Organization Dropdown */}
-          <Form.Group controlId="formOrganization">
-            <Form.Label>Organization</Form.Label>
-            <Form.Control as="select" name="organization" value={formData.organization} onChange={handleChange} >
-              <option value="">Select Organization</option>
-              {organizations.map(org => (
-                <option key={org.id} value={org.id}>{org.name}</option>
-              ))}
-            </Form.Control>
           </Form.Group>
 
           {/* Department Dropdown */}
@@ -239,8 +231,19 @@ const fetchYearLevels = async (departmentId) => {
             <Form.Label>Department</Form.Label>
             <Form.Control as="select" name="department" value={formData.department} onChange={handleChange} required>
               <option value="">Select Department</option>
-              {departments.map(dept => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
+              {departments.map(department => (
+                <option key={department.id} value={department.id}>{department.name}</option>
+              ))}
+            </Form.Control>
+          </Form.Group>
+
+          {/* Year Level Dropdown */}
+          <Form.Group controlId="formYearLevel">
+            <Form.Label>Year Level</Form.Label>
+            <Form.Control as="select" name="yearLevel" value={formData.yearLevel} onChange={handleChange} required>
+              <option value="">Select Year Level</option>
+              {yearLevels.map(year => (
+                <option key={year.id} value={year.id}>{year.name}</option>
               ))}
             </Form.Control>
           </Form.Group>
@@ -259,7 +262,7 @@ const fetchYearLevels = async (departmentId) => {
           {/* Major Dropdown */}
           <Form.Group controlId="formMajor">
             <Form.Label>Major</Form.Label>
-            <Form.Control as="select" name="major" value={formData.major} onChange={handleChange} required>
+            <Form.Control as="select" name="major" value={formData.major} onChange={handleChange} >
               <option value="">Select Major</option>
               {majors.map(major => (
                 <option key={major.id} value={major.id}>{major.name}</option>
@@ -267,32 +270,43 @@ const fetchYearLevels = async (departmentId) => {
             </Form.Control>
           </Form.Group>
 
-          <Form.Group controlId="formSchoolID">
-            <Form.Label>School ID</Form.Label>
-            <Form.Control type="text" name="schoolID" value={formData.schoolID} onChange={handleChange} required />
+          {/* Organization Checkboxes */}
+          <Form.Group controlId="formOrganization">
+            <Form.Label>Organization</Form.Label>
+            {organizations.map(org => (
+              <Form.Check
+                key={org.id}
+                type="checkbox"
+                label={org.name}
+                name="organization"
+                value={org.id}
+                onChange={handleChange}
+              />
+            ))}
           </Form.Group>
+
           <Form.Group controlId="formPassword">
             <Form.Label>Password</Form.Label>
             <Form.Control type="password" name="password" value={formData.password} onChange={handleChange} required />
           </Form.Group>
-          
+
           {/* Photo Uploads */}
           <Form.Group controlId="formFrontPhoto">
-            <Form.Label>Upload Front Photo</Form.Label>
+            <Form.Label>Front Photo</Form.Label>
             <Form.Control type="file" name="front" onChange={handlePhotoChange} required />
           </Form.Group>
+
           <Form.Group controlId="formLeftPhoto">
-            <Form.Label>Upload Left Photo</Form.Label>
+            <Form.Label>Left Photo</Form.Label>
             <Form.Control type="file" name="left" onChange={handlePhotoChange} required />
           </Form.Group>
+
           <Form.Group controlId="formRightPhoto">
-            <Form.Label>Upload Right Photo</Form.Label>
+            <Form.Label>Right Photo</Form.Label>
             <Form.Control type="file" name="right" onChange={handlePhotoChange} required />
           </Form.Group>
 
-          <Button variant="primary" type="submit">
-            Sign Up
-          </Button>
+          <Button variant="primary" type="submit">Register</Button>
         </Form>
       )}
     </div>
